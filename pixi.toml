@@ -1,0 +1,11 @@
+[workspace]
+authors = ["Esteban Ginez. <175813+eginez@users.noreply.github.com>"]
+channels = ["https://conda.modular.com/max-nightly", "conda-forge"]
+name = "mojo-learning"
+platforms = ["osx-arm64"]
+version = "0.1.0"
+
+[tasks]
+
+[dependencies]
+modular = ">=25.5.0.dev2025072705,<26"
