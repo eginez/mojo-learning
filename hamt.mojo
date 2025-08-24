@@ -72,6 +72,7 @@ struct HAMT[K: Movable & Copyable & Hashable, V: Movable & Copyable]:
         # The tree only allows for 10 levels, since  we are
         # spliting the hashed keys into chuncks of 6
         # and the hash key is of size 60 bits
+        # TODO make this a comptime var
         while curr_level < 10:
             hashed_key = self._calculate_hash(key)
             chunk_index = self._get_next_chunk(hashed_key, curr_level)
