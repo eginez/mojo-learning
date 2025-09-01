@@ -40,6 +40,19 @@ struct HAMTNode[K: Movable & Copyable & Hashable, V: Movable & Copyable](
         self.children = List[UnsafePointer[HAMTNode[K, V]]]()
         self.leaf = None
 
+    fn add_child(self, chunk_index: UInt8) -> HAMTNode[K,V]:
+        masked_chunked = UInt64(1) << chunk_index
+        self.children_bitmap |= masked_chunked
+        masked_bitmap = (masked_chunked - 1) & self.children_bitmap
+        child_index = pop_count(masked_bitmap)
+        #
+        # I might have to add an element to the list
+        var new_node = HAMTNode()
+        if child_index > len(self.children):
+          self.children.append(new_node)
+        else:
+          self.children[children] = new_node
+
     fn get_child(self, chunk_index: UInt8) -> Optional[HAMTNode[K, V]]:
         # The chunk index as an integer represents
         # the position in the sparse representaion of the node
@@ -60,6 +73,7 @@ struct HAMT[K: Movable & Copyable & Hashable, V: Movable & Copyable]:
 
     fn __init__(out self):
         self.root = None
+        self._max_level = 10
         pass
 
     fn get(self, key: K) -> Optional[V]:
@@ -73,7 +87,7 @@ struct HAMT[K: Movable & Copyable & Hashable, V: Movable & Copyable]:
         # spliting the hashed keys into chuncks of 6
         # and the hash key is of size 60 bits
         # TODO make this a comptime var
-        while curr_level < 10:
+        while curr_level < self._max_level:
             hashed_key = self._calculate_hash(key)
             chunk_index = self._get_next_chunk(hashed_key, curr_level)
             curr_node = curr_node.get_child(chunk_index)
@@ -82,6 +96,21 @@ struct HAMT[K: Movable & Copyable & Hashable, V: Movable & Copyable]:
             curr_level += 1
 
         return None
+
+
+      fn set(self, key: K, value: V):
+        var curr_level = 0
+        var curr_node = self.root
+
+        while curr_level < self._max_level:
+            hashed_key = self._calculate_hash(key)
+            chunk_index = self._get_next_chunk(hashed_key, curr_level)
+            var parent_node = curr_node
+            curr_node = curr_node.get_child(chunk_index)
+            if not curr_node:
+              # insert node in the parent at index chun_index
+              curr_node=parent_node.create_node(chunk_index)
+
 
     @always_inline
     fn _get_next_chunk(self, hashed_key: UInt64, level: UInt16) -> UInt8:
