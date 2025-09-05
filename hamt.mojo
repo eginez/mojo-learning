@@ -38,20 +38,19 @@ struct HAMTNode[K: Movable & Copyable & Hashable, V: Movable & Copyable](
     fn __init__(out self):
         self.children_bitmap = 0
         self.children = List[UnsafePointer[HAMTNode[K, V]]]()
-        self.leaf = None
 
-    fn add_child(self, chunk_index: UInt8) -> HAMTNode[K,V]:
-        masked_chunked = UInt64(1) << chunk_index
+    fn add_child(self, chunk_index: UInt8) -> HAMTNode[K, V]:
+        masked_chunked = UInt8(1) << chunk_index
         self.children_bitmap |= masked_chunked
         masked_bitmap = (masked_chunked - 1) & self.children_bitmap
         child_index = pop_count(masked_bitmap)
         #
         # I might have to add an element to the list
-        var new_node = HAMTNode()
+        var new_node = HAMTNode[K, V]()
         if child_index > len(self.children):
-          self.children.append(new_node)
+            self.children.append(new_node)
         else:
-          self.children[children] = new_node
+            self.children[children] = new_node
 
     fn get_child(self, chunk_index: UInt8) -> Optional[HAMTNode[K, V]]:
         # The chunk index as an integer represents
@@ -70,6 +69,7 @@ struct HAMTNode[K: Movable & Copyable & Hashable, V: Movable & Copyable](
 
 struct HAMT[K: Movable & Copyable & Hashable, V: Movable & Copyable]:
     var root: Optional[UnsafePointer[HAMTNode[K, V]]]
+    var _max_level: UInt16
 
     fn __init__(out self):
         self.root = None
@@ -80,7 +80,7 @@ struct HAMT[K: Movable & Copyable & Hashable, V: Movable & Copyable]:
         if self.root == None:
             return None
 
-        var curr_level = 0
+        var curr_level: UInt16 = 0
         var curr_node = self.root
 
         # The tree only allows for 10 levels, since  we are
@@ -97,8 +97,7 @@ struct HAMT[K: Movable & Copyable & Hashable, V: Movable & Copyable]:
 
         return None
 
-
-      fn set(self, key: K, value: V):
+    fn set(self, key: K, value: V):
         var curr_level = 0
         var curr_node = self.root
 
@@ -108,9 +107,8 @@ struct HAMT[K: Movable & Copyable & Hashable, V: Movable & Copyable]:
             var parent_node = curr_node
             curr_node = curr_node.get_child(chunk_index)
             if not curr_node:
-              # insert node in the parent at index chun_index
-              curr_node=parent_node.create_node(chunk_index)
-
+                # insert node in the parent at index chun_index
+                curr_node = parent_node.create_node(chunk_index)
 
     @always_inline
     fn _get_next_chunk(self, hashed_key: UInt64, level: UInt16) -> UInt8:

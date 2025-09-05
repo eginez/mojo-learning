@@ -1,0 +1,10 @@
+{
+  "lsp": {
+    "mojo": {
+      "binary": {
+        "path": "pixi",
+        "arguments": ["run", "mojo-lsp-server"]
+      }
+    }
+  }
+}
