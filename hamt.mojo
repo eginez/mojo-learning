@@ -39,45 +39,46 @@ struct HAMTNode[K: Movable & Copyable & Hashable, V: Movable & Copyable](
         self.children_bitmap = 0
         self.children = List[UnsafePointer[HAMTNode[K, V]]]()
 
-    fn add_child(self, chunk_index: UInt8) -> HAMTNode[K, V]:
+    fn add_child(mut self, chunk_index: UInt8) -> UnsafePointer[HAMTNode[K, V]]:
         masked_chunked = UInt8(1) << chunk_index
-        self.children_bitmap |= masked_chunked
-        masked_bitmap = (masked_chunked - 1) & self.children_bitmap
+        self.children_bitmap |= UInt64(masked_chunked)
+        masked_bitmap = UInt64(masked_chunked - 1) & self.children_bitmap
         child_index = pop_count(masked_bitmap)
         #
         # I might have to add an element to the list
-        var new_node = HAMTNode[K, V]()
+        var new_node_pointer = UnsafePointer(to=HAMTNode[K, V]())
         if child_index > len(self.children):
-            self.children.append(new_node)
+            self.children.append(new_node_pointer)
         else:
-            self.children[children] = new_node
+            self.children[child_index] = new_node_pointer
+        return new_node_pointer
 
-    fn get_child(self, chunk_index: UInt8) -> Optional[HAMTNode[K, V]]:
+    fn get_child(self, chunk_index: UInt8) -> UnsafePointer[HAMTNode[K, V]]:
         # The chunk index as an integer represents
         # the position in the sparse representaion of the node
         # of where we should expedt to have a value
-        masked_chunked = UInt64(1) << chunk_index
-        if not (self.children_bitmap & masked_chunked):
-            return None
+        masked_chunked = UInt8(1) << chunk_index
+        if not (self.children_bitmap & UInt64(masked_chunked)):
+            return UnsafePointer[HAMTNode[K, V]]()
 
         # The actual index of the value, is number of 1s before
         # that position.
-        masked_bitmap = (masked_chunked - 1) & self.children_bitmap
+        masked_bitmap = UInt64(masked_chunked - 1) & self.children_bitmap
         child_index = pop_count(masked_bitmap)
         return self.children[child_index]
 
 
 struct HAMT[K: Movable & Copyable & Hashable, V: Movable & Copyable]:
-    var root: Optional[UnsafePointer[HAMTNode[K, V]]]
+    var root: UnsafePointer[HAMTNode[K, V]]
     var _max_level: UInt16
 
     fn __init__(out self):
-        self.root = None
+        self.root = UnsafePointer[HAMTNode[K, V]]()
         self._max_level = 10
         pass
 
     fn get(self, key: K) -> Optional[V]:
-        if self.root == None:
+        if self.root:
             return None
 
         var curr_level: UInt16 = 0
@@ -90,25 +91,23 @@ struct HAMT[K: Movable & Copyable & Hashable, V: Movable & Copyable]:
         while curr_level < self._max_level:
             hashed_key = self._calculate_hash(key)
             chunk_index = self._get_next_chunk(hashed_key, curr_level)
-            curr_node = curr_node.get_child(chunk_index)
-            if not curr_node:
-                return None
+            curr_node = curr_node[].get_child(chunk_index)
             curr_level += 1
 
         return None
 
     fn set(self, key: K, value: V):
-        var curr_level = 0
+        var curr_level: UInt16 = 0
         var curr_node = self.root
 
         while curr_level < self._max_level:
             hashed_key = self._calculate_hash(key)
             chunk_index = self._get_next_chunk(hashed_key, curr_level)
             var parent_node = curr_node
-            curr_node = curr_node.get_child(chunk_index)
+            curr_node = curr_node[].get_child(chunk_index)
             if not curr_node:
                 # insert node in the parent at index chun_index
-                curr_node = parent_node.create_node(chunk_index)
+                curr_node = parent_node[].add_child(chunk_index)
 
     @always_inline
     fn _get_next_chunk(self, hashed_key: UInt64, level: UInt16) -> UInt8:
@@ -132,8 +131,6 @@ fn main() raises:
     node = HAMTNode[Int, Int]()
     assert_equal(node.children_bitmap, 0)
     assert_equal(len(node.children), 0)
-    for i in range(10):
-        print(len(bin(node._calculate_hash(i))))
 
 
 # =================================
