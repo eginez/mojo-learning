@@ -70,7 +70,9 @@ struct HAMTNode[K: Movable & Copyable & Hashable, V: Movable & Copyable](
         # of where we should expedt to have a value
         masked_chunked = UInt8(1) << chunk_index
         if not (self.children_bitmap & UInt64(masked_chunked)):
-            return UnsafePointer[HAMTNode[K, V]]()
+            var new_node_pointer = UnsafePointer[HAMTNode[K, V]].alloc(1)
+            # new_node_pointer.init_pointee_move(HAMTNode[K, V]())
+            return new_node_pointer
 
         # The actual index of the value, is number of 1s before
         # that position.
@@ -120,6 +122,8 @@ struct HAMT[K: Movable & Copyable & Hashable, V: Movable & Copyable]:
             if not curr_node:
                 # insert node in the parent at index chun_index
                 curr_node = parent_node[].add_child(chunk_index)
+            curr_level += 1
+            print("level", curr_level)
 
         curr_node[].add_value(key, value)
 
@@ -142,6 +146,6 @@ struct HAMT[K: Movable & Copyable & Hashable, V: Movable & Copyable]:
 
 
 fn main() raises:
-    node = HAMTNode[Int, Int]()
-    assert_equal(node.children_bitmap, 0)
-    assert_equal(len(node.children), 0)
+    var node = HAMT[Int, Int]()
+    node.set(1, 1)
+    print(node.get(1).or_else(2))

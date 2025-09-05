@@ -82,4 +82,4 @@ def test_hamt_value_creation():
 def test_hamt_creation():
     var node = HAMT[Int, Int]()
     node.set(1, 1)
-    # assert_equal(node.get(1).value(), 1)
+    assert_equal(node.get(1).value(), 1)
