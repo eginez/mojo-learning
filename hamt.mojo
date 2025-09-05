@@ -1,6 +1,6 @@
 from collections import List
 from memory import UnsafePointer
-from testing import assert_equal
+from testing import assert_equal, assert_true
 from bit.bit import pop_count
 from logger import Logger, Level
 from sys.param_env import env_get_string
@@ -34,10 +34,21 @@ struct HAMTNode[K: Movable & Copyable & Hashable, V: Movable & Copyable](
     # This tells gives you the actual child, it is a dense
     # array.
     var children: List[UnsafePointer[HAMTNode[K, V]]]
+    var leaf_node: Optional[HAMTLeafNode[K, V]]
 
     fn __init__(out self):
         self.children_bitmap = 0
         self.children = List[UnsafePointer[HAMTNode[K, V]]]()
+        self.leaf_node = Optional[HAMTLeafNode[K, V]]()
+
+    fn add_value(mut self, key: K, value: V):
+        self.leaf_node = Optional(HAMTLeafNode(key, value))
+
+    fn get_value(self, key: K) raises -> Optional[V]:
+        assert_true(self.leaf_node, "Node needs to have value")
+        if hash(key) == hash(self.leaf_node.value().key):
+            return Optional(self.leaf_node.value().value)
+        return Optional[V]()
 
     fn add_child(mut self, chunk_index: UInt8) -> UnsafePointer[HAMTNode[K, V]]:
         masked_chunked = UInt8(1) << chunk_index
@@ -73,11 +84,11 @@ struct HAMT[K: Movable & Copyable & Hashable, V: Movable & Copyable]:
     var _max_level: UInt16
 
     fn __init__(out self):
-        self.root = UnsafePointer[HAMTNode[K, V]]()
+        self.root = UnsafePointer(to=HAMTNode[K, V]())
         self._max_level = 10
         pass
 
-    fn get(self, key: K) -> Optional[V]:
+    fn get(self, key: K) raises -> Optional[V]:
         if self.root:
             return None
 
@@ -94,11 +105,12 @@ struct HAMT[K: Movable & Copyable & Hashable, V: Movable & Copyable]:
             curr_node = curr_node[].get_child(chunk_index)
             curr_level += 1
 
-        return None
+        return curr_node[].get_value(key)
 
     fn set(self, key: K, value: V):
         var curr_level: UInt16 = 0
         var curr_node = self.root
+        print("adding child")
 
         while curr_level < self._max_level:
             hashed_key = self._calculate_hash(key)
@@ -108,6 +120,8 @@ struct HAMT[K: Movable & Copyable & Hashable, V: Movable & Copyable]:
             if not curr_node:
                 # insert node in the parent at index chun_index
                 curr_node = parent_node[].add_child(chunk_index)
+
+        curr_node[].add_value(key, value)
 
     @always_inline
     fn _get_next_chunk(self, hashed_key: UInt64, level: UInt16) -> UInt8:
@@ -131,7 +145,3 @@ fn main() raises:
     node = HAMTNode[Int, Int]()
     assert_equal(node.children_bitmap, 0)
     assert_equal(len(node.children), 0)
-
-
-# =================================
-# Tests
