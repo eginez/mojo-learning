@@ -51,33 +51,36 @@ struct HAMTNode[K: Movable & Copyable & Hashable, V: Movable & Copyable](
         return Optional[V]()
 
     fn add_child(mut self, chunk_index: UInt8) -> UnsafePointer[HAMTNode[K, V]]:
-        masked_chunked = UInt8(1) << chunk_index
-        self.children_bitmap |= UInt64(masked_chunked)
+        masked_chunked = UInt64(1) << UInt64(chunk_index)
         masked_bitmap = UInt64(masked_chunked - 1) & self.children_bitmap
         child_index = pop_count(masked_bitmap)
-        #
+        self.children_bitmap |= UInt64(masked_chunked)
+
         # I might have to add an element to the list
-        var new_node_pointer = UnsafePointer(to=HAMTNode[K, V]())
-        if child_index > len(self.children):
-            self.children.append(new_node_pointer)
-        else:
-            self.children[child_index] = new_node_pointer
+        var new_node_pointer = UnsafePointer[HAMTNode[K, V]].alloc(1)
+        new_node_pointer.init_pointee_move(HAMTNode[K,V]())
+        var should_shift = child_index < len(self.children)
+        self.children.append(new_node_pointer)
+        if should_shift:
+            for i in range(len(self.children) -1, child_index, -1):
+                self.children[i] = self.children[i - 1]
+        self.children[child_index] = new_node_pointer
         return new_node_pointer
 
-    fn get_child(self, chunk_index: UInt8) -> UnsafePointer[HAMTNode[K, V]]:
+    fn get_child(self, chunk_index: UInt8) raises -> UnsafePointer[HAMTNode[K, V]]:
         # The chunk index as an integer represents
         # the position in the sparse representaion of the node
-        # of where we should expedt to have a value
-        masked_chunked = UInt8(1) << chunk_index
-        if not (self.children_bitmap & UInt64(masked_chunked)):
-            var new_node_pointer = UnsafePointer[HAMTNode[K, V]].alloc(1)
-            # new_node_pointer.init_pointee_move(HAMTNode[K, V]())
-            return new_node_pointer
+        # of where we should expect to have a value
+        masked_chunked = UInt64(1) << UInt64(chunk_index)
+        if (self.children_bitmap & UInt64(masked_chunked)) == 0:
+            logger.debug("did not find child, returning null for chunk index", chunk_index, self.children_bitmap)
+            return UnsafePointer[HAMTNode[K,V]]()
 
         # The actual index of the value, is number of 1s before
         # that position.
         masked_bitmap = UInt64(masked_chunked - 1) & self.children_bitmap
         child_index = pop_count(masked_bitmap)
+        assert_true(child_index < len(self.children), "bad child index")
         return self.children[child_index]
 
 
@@ -86,44 +89,46 @@ struct HAMT[K: Movable & Copyable & Hashable, V: Movable & Copyable]:
     var _max_level: UInt16
 
     fn __init__(out self):
-        self.root = UnsafePointer(to=HAMTNode[K, V]())
+        self.root = UnsafePointer[HAMTNode[K, V]].alloc(1)
+        # This initializes the pointer memory with a value
+        self.root.init_pointee_move(HAMTNode[K,V]())
+        # TODO make this a comptime var
         self._max_level = 10
         pass
 
     fn get(self, key: K) raises -> Optional[V]:
-        if self.root:
+        if not self.root:
             return None
 
         var curr_level: UInt16 = 0
         var curr_node = self.root
+        var hashed_key = self._calculate_hash(key)
 
         # The tree only allows for 10 levels, since  we are
         # spliting the hashed keys into chuncks of 6
         # and the hash key is of size 60 bits
-        # TODO make this a comptime var
         while curr_level < self._max_level:
-            hashed_key = self._calculate_hash(key)
             chunk_index = self._get_next_chunk(hashed_key, curr_level)
             curr_node = curr_node[].get_child(chunk_index)
+            if not curr_node:
+                return Optional[V]()
             curr_level += 1
 
         return curr_node[].get_value(key)
 
-    fn set(self, key: K, value: V):
+    fn set(mut self, key: K, value: V) raises:
         var curr_level: UInt16 = 0
         var curr_node = self.root
-        print("adding child")
+        var hashed_key = self._calculate_hash(key)
 
         while curr_level < self._max_level:
-            hashed_key = self._calculate_hash(key)
             chunk_index = self._get_next_chunk(hashed_key, curr_level)
-            var parent_node = curr_node
-            curr_node = curr_node[].get_child(chunk_index)
-            if not curr_node:
-                # insert node in the parent at index chun_index
-                curr_node = parent_node[].add_child(chunk_index)
+            var next_node = curr_node[].get_child(chunk_index)
+            if not next_node:
+                # insert node in the parent at index chunk_index
+                next_node = curr_node[].add_child(chunk_index)
+            curr_node = next_node
             curr_level += 1
-            print("level", curr_level)
 
         curr_node[].add_value(key, value)
 
@@ -148,4 +153,4 @@ struct HAMT[K: Movable & Copyable & Hashable, V: Movable & Copyable]:
 fn main() raises:
     var node = HAMT[Int, Int]()
     node.set(1, 1)
-    print(node.get(1).or_else(2))
+    print(node.get(1).or_else(-1))

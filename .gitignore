@@ -1,4 +1,25 @@
+# Compiled binaries (executable files without extension)
+# Git will detect these as binary automatically
+*
+!*/
+!*.*
 
-# pixi environments
-.pixi
-*.egg-info
+# Debug symbols
+*.dSYM/
+
+# Build artifacts
+*.o
+*.a
+*.so
+*.dylib
+
+# IDE/Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db

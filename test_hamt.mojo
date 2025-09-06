@@ -39,12 +39,12 @@ def test_hamt_chunk_extraction():
     # Test chunk extraction at different levels
     # For a 60-bit hash split into 6-bit chunks, we have 10 levels (0-9)
     var test_hash: UInt64 = (
-        0b111111000000111111000000111111000000111111000000111111000000
+        0b111111000000111111000000111111000000111111000000111111010000
     )
 
     # Level 0: bits 0-5
     var chunk0 = hamt._get_next_chunk(test_hash, 0)
-    assert_equal(chunk0, 0b000000)  # Bottom 6 bits
+    assert_equal(chunk0, 0b010000)  # Bottom 6 bits
 
     # Level 1: bits 6-11
     var chunk1 = hamt._get_next_chunk(test_hash, 1)
@@ -53,6 +53,10 @@ def test_hamt_chunk_extraction():
     # Level 2: bits 12-17
     var chunk2 = hamt._get_next_chunk(test_hash, 2)
     assert_equal(chunk2, 0b000000)
+
+    # Level 9: bits 54-60
+    var chunk3 = hamt._get_next_chunk(test_hash, 9)
+    assert_equal(chunk3, 0b111111)
 
     print("✓ HAMT chunk extraction tests passed")
 
@@ -82,4 +86,248 @@ def test_hamt_value_creation():
 def test_hamt_creation():
     var node = HAMT[Int, Int]()
     node.set(1, 1)
-    assert_equal(node.get(1).value(), 1)
+    var val = node.get(1).value()
+    assert_true(val, "expected the key")
+    assert_equal(val, 1)
+    print("✓ HAMT creation tests passed")
+
+
+def test_hamt_multiple_values():
+    var hamt = HAMT[Int, String]()
+
+    # Insert multiple key-value pairs
+    hamt.set(1, "one")
+    hamt.set(2, "two")
+    hamt.set(10, "ten")
+    hamt.set(100, "hundred")
+
+    # Verify all values can be retrieved
+    assert_equal(hamt.get(1).value(), "one")
+    assert_equal(hamt.get(2).value(), "two")
+    assert_equal(hamt.get(10).value(), "ten")
+    assert_equal(hamt.get(100).value(), "hundred")
+    print("✓ HAMT multiple values tests passed")
+
+
+def test_hamt_overwrite_values():
+    var hamt = HAMT[Int, Int]()
+
+    # Set initial value
+    hamt.set(42, 100)
+    assert_equal(hamt.get(42).value(), 100)
+
+    # Overwrite with new value
+    hamt.set(42, 200)
+    assert_equal(hamt.get(42).value(), 200)
+    print("✓ HAMT overwrite tests passed")
+
+
+def test_hamt_nonexistent_keys():
+    var hamt = HAMT[Int, String]()
+
+    # Add some values
+    hamt.set(1, "exists")
+    hamt.set(5, "also exists")
+
+    # Try to get non-existent keys
+    var result1 = hamt.get(99)
+    assert_false(result1, "Key 99 should not exist")
+
+    var result2 = hamt.get(-1)
+    assert_false(result2, "Key -1 should not exist")
+    print("✓ HAMT nonexistent keys tests passed")
+
+
+def test_hamt_string_keys():
+    var hamt = HAMT[String, Int]()
+
+    hamt.set("apple", 1)
+    hamt.set("banana", 2)
+    hamt.set("cherry", 3)
+    hamt.set("date", 4)
+
+    assert_equal(hamt.get("apple").value(), 1)
+    assert_equal(hamt.get("banana").value(), 2)
+    assert_equal(hamt.get("cherry").value(), 3)
+    assert_equal(hamt.get("date").value(), 4)
+
+    # Test non-existent string key
+    assert_false(hamt.get("elderberry"))
+    print("✓ HAMT string keys tests passed")
+
+
+def test_hamt_large_numbers():
+    var hamt = HAMT[Int, Int]()
+
+    # Test with large numbers that might cause hash collisions
+    var large_keys = List[Int]()
+    large_keys.append(1000000)
+    large_keys.append(2000000)
+    large_keys.append(3000000)
+    large_keys.append(9999999)
+
+    for i in range(len(large_keys)):
+        var key = large_keys[i]
+        hamt.set(key, key * 2)
+
+    for i in range(len(large_keys)):
+        var key = large_keys[i]
+        assert_equal(hamt.get(key).value(), key * 2)
+
+    print("✓ HAMT large numbers tests passed")
+
+
+def test_hamt_sequential_keys():
+    var hamt = HAMT[Int, Int]()
+
+    # Insert sequential keys (might have similar hash patterns)
+    for i in range(20):
+        hamt.set(i, i * 10)
+
+    # Verify all sequential keys
+    for i in range(20):
+        assert_equal(hamt.get(i).value(), i * 10)
+
+    print("✓ HAMT sequential keys tests passed")
+
+
+def test_hamt_zero_and_negative():
+    var hamt = HAMT[Int, String]()
+
+    # Test zero key
+    hamt.set(0, "zero")
+    assert_equal(hamt.get(0).value(), "zero")
+
+    # Test negative keys
+    hamt.set(-1, "negative one")
+    hamt.set(-100, "negative hundred")
+    hamt.set(-999999, "large negative")
+
+    assert_equal(hamt.get(-1).value(), "negative one")
+    assert_equal(hamt.get(-100).value(), "negative hundred")
+    assert_equal(hamt.get(-999999).value(), "large negative")
+    print("✓ HAMT zero and negative tests passed")
+
+
+def test_hamt_sparse_keys():
+    var hamt = HAMT[Int, Int]()
+
+    # Test very sparse key distribution
+    var sparse_keys = List[Int]()
+    sparse_keys.append(1)
+    sparse_keys.append(1000)
+    sparse_keys.append(1000000)
+    sparse_keys.append(1000000000)
+
+    for i in range(len(sparse_keys)):
+        var key = sparse_keys[i]
+        hamt.set(key, key + 1)
+
+    for i in range(len(sparse_keys)):
+        var key = sparse_keys[i]
+        assert_equal(hamt.get(key).value(), key + 1)
+
+    print("✓ HAMT sparse keys tests passed")
+
+
+def test_hamt_mixed_operations():
+    var hamt = HAMT[String, String]()
+
+    # Mix of sets and gets
+    hamt.set("first", "1st")
+    assert_equal(hamt.get("first").value(), "1st")
+
+    hamt.set("second", "2nd")
+    hamt.set("third", "3rd")
+
+    # Verify first key still works after adding more
+    assert_equal(hamt.get("first").value(), "1st")
+    assert_equal(hamt.get("second").value(), "2nd")
+    assert_equal(hamt.get("third").value(), "3rd")
+
+    # Update existing key
+    hamt.set("second", "SECOND")
+    assert_equal(hamt.get("second").value(), "SECOND")
+
+    # Other keys should be unchanged
+    assert_equal(hamt.get("first").value(), "1st")
+    assert_equal(hamt.get("third").value(), "3rd")
+    print("✓ HAMT mixed operations tests passed")
+
+
+def test_hamt_empty_string_keys():
+    var hamt = HAMT[String, Int]()
+
+    # Test empty string as key
+    hamt.set("", 42)
+    assert_equal(hamt.get("").value(), 42)
+
+    # Test single character keys
+    hamt.set("a", 1)
+    hamt.set("z", 26)
+
+    assert_equal(hamt.get("").value(), 42)
+    assert_equal(hamt.get("a").value(), 1)
+    assert_equal(hamt.get("z").value(), 26)
+    print("✓ HAMT empty string keys tests passed")
+
+
+def test_hamt_similar_keys():
+    var hamt = HAMT[String, Int]()
+
+    # Test keys that might have similar hash patterns
+    hamt.set("test1", 1)
+    hamt.set("test2", 2)
+    hamt.set("test3", 3)
+    hamt.set("1test", 4)
+    hamt.set("2test", 5)
+
+    assert_equal(hamt.get("test1").value(), 1)
+    assert_equal(hamt.get("test2").value(), 2)
+    assert_equal(hamt.get("test3").value(), 3)
+    assert_equal(hamt.get("1test").value(), 4)
+    assert_equal(hamt.get("2test").value(), 5)
+    print("✓ HAMT similar keys tests passed")
+
+
+def test_hamt_boundary_chunk_indices():
+    var hamt = HAMT[Int, String]()
+
+    # Test keys that produce boundary chunk indices (0, 63)
+    # This tests edge cases in bit manipulation
+    var test_pairs = List[Tuple[Int, String]]()
+
+    # Add various keys to test different chunk patterns
+    for i in range(100):
+        var key = i * 1000 + i  # Create varied hash patterns
+        var value = "val_" + i.__str__()
+        hamt.set(key, value)
+        test_pairs.append((key, value))
+
+    # Verify all insertions
+    for i in range(len(test_pairs)):
+        var pair = test_pairs[i]
+        assert_equal(hamt.get(pair[0]).value(), pair[1])
+
+    print("✓ HAMT boundary chunk indices tests passed")
+
+
+def test_hamt_deep_tree():
+    var hamt = HAMT[Int, Int]()
+
+    # Create keys that force maximum tree depth
+    # Since we have 10 levels max, try to create a scenario
+    # that uses multiple levels
+    var base_key = 1
+    for level in range(5):  # Test multiple levels
+        for offset in range(10):
+            var key = base_key + (offset << (level * 6))
+            hamt.set(key, key * 2)
+
+    # Verify all keys still retrievable
+    for level in range(5):
+        for offset in range(10):
+            var key = base_key + (offset << (level * 6))
+            assert_equal(hamt.get(key).value(), key * 2)
+
+    print("✓ HAMT deep tree tests passed")
