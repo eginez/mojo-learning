@@ -58,23 +58,29 @@ struct HAMTNode[K: Movable & Copyable & Hashable, V: Movable & Copyable](
 
         # I might have to add an element to the list
         var new_node_pointer = UnsafePointer[HAMTNode[K, V]].alloc(1)
-        new_node_pointer.init_pointee_move(HAMTNode[K,V]())
+        new_node_pointer.init_pointee_move(HAMTNode[K, V]())
         var should_shift = child_index < len(self.children)
         self.children.append(new_node_pointer)
         if should_shift:
-            for i in range(len(self.children) -1, child_index, -1):
+            for i in range(len(self.children) - 1, child_index, -1):
                 self.children[i] = self.children[i - 1]
         self.children[child_index] = new_node_pointer
         return new_node_pointer
 
-    fn get_child(self, chunk_index: UInt8) raises -> UnsafePointer[HAMTNode[K, V]]:
+    fn get_child(
+        self, chunk_index: UInt8
+    ) raises -> UnsafePointer[HAMTNode[K, V]]:
         # The chunk index as an integer represents
         # the position in the sparse representaion of the node
         # of where we should expect to have a value
         masked_chunked = UInt64(1) << UInt64(chunk_index)
         if (self.children_bitmap & UInt64(masked_chunked)) == 0:
-            logger.debug("did not find child, returning null for chunk index", chunk_index, self.children_bitmap)
-            return UnsafePointer[HAMTNode[K,V]]()
+            logger.debug(
+                "did not find child, returning null for chunk index",
+                chunk_index,
+                self.children_bitmap,
+            )
+            return UnsafePointer[HAMTNode[K, V]]()
 
         # The actual index of the value, is number of 1s before
         # that position.
@@ -91,7 +97,7 @@ struct HAMT[K: Movable & Copyable & Hashable, V: Movable & Copyable]:
     fn __init__(out self):
         self.root = UnsafePointer[HAMTNode[K, V]].alloc(1)
         # This initializes the pointer memory with a value
-        self.root.init_pointee_move(HAMTNode[K,V]())
+        self.root.init_pointee_move(HAMTNode[K, V]())
         # TODO make this a comptime var
         self._max_level = 10
         pass
