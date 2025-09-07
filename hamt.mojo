@@ -13,20 +13,36 @@ alias FILTER: UInt64 = 0x0FFFFFFFFFFFFFFF
 alias logger = Logger()
 
 
-struct HAMTLeafNode[K: Movable & Copyable & Hashable, V: Movable & Copyable](
-    Copyable, Movable
-):
-    var key: K
-    var value: V
+struct HAMTLeafNode[
+    K: Movable & Copyable & Hashable & EqualityComparable, V: Movable & Copyable
+](Copyable, Movable):
+    var _items: List[Tuple[K, V]]
 
     fn __init__(out self, key: K, value: V):
-        self.key = key
-        self.value = value
+        self._items = List[Tuple[K, V]]()
+        self.add(key, value)
+
+    fn add(mut self, key: K, value: V):
+        for i in range(len(self._items)):
+            if self._items[i][0] == key:
+                self._items[i] = (key, value)
+                return
+        self._items.append(Tuple(key, value))
+
+    fn get(self, key: K) -> Optional[V]:
+        if len(self._items) == 1:
+            if self._items[0][0] == key:
+                return Optional(self._items[0][1])
+
+        for item in self._items:
+            if item[0] == key:
+                return Optional(item[1])
+        return Optional[V]()
 
 
-struct HAMTNode[K: Movable & Copyable & Hashable, V: Movable & Copyable](
-    Copyable, Movable
-):
+struct HAMTNode[
+    K: Movable & Copyable & Hashable & EqualityComparable, V: Movable & Copyable
+](Copyable, Movable):
     # This tells you what children are in this node
     # It represents a sparse array via an intenger
     var children_bitmap: UInt64
@@ -42,12 +58,14 @@ struct HAMTNode[K: Movable & Copyable & Hashable, V: Movable & Copyable](
         self.leaf_node = Optional[HAMTLeafNode[K, V]]()
 
     fn add_value(mut self, key: K, value: V):
-        self.leaf_node = Optional(HAMTLeafNode(key, value))
+        if self.leaf_node:
+            self.leaf_node.value().add(key, value)
+        else:
+            self.leaf_node = Optional(HAMTLeafNode(key, value))
 
-    fn get_value(self, key: K) raises -> Optional[V]:
-        assert_true(self.leaf_node, "Node needs to have value")
-        if hash(key) == hash(self.leaf_node.value().key):
-            return Optional(self.leaf_node.value().value)
+    fn get_value(self, key: K) -> Optional[V]:
+        if self.leaf_node:
+            return self.leaf_node.value().get(key)
         return Optional[V]()
 
     fn add_child(mut self, chunk_index: UInt8) -> UnsafePointer[HAMTNode[K, V]]:
@@ -56,7 +74,6 @@ struct HAMTNode[K: Movable & Copyable & Hashable, V: Movable & Copyable](
         child_index = pop_count(masked_bitmap)
         self.children_bitmap |= UInt64(masked_chunked)
 
-        # I might have to add an element to the list
         var new_node_pointer = UnsafePointer[HAMTNode[K, V]].alloc(1)
         new_node_pointer.init_pointee_move(HAMTNode[K, V]())
         var should_shift = child_index < len(self.children)
@@ -90,17 +107,25 @@ struct HAMTNode[K: Movable & Copyable & Hashable, V: Movable & Copyable](
         return self.children[child_index]
 
 
-struct HAMT[K: Movable & Copyable & Hashable, V: Movable & Copyable]:
+struct HAMT[
+    K: Movable & Copyable & Hashable & EqualityComparable, V: Movable & Copyable
+]:
     var root: UnsafePointer[HAMTNode[K, V]]
     var _max_level: UInt16
+    var _custom_hash_fn: Optional[fn (K) -> UInt64]
 
     fn __init__(out self):
         self.root = UnsafePointer[HAMTNode[K, V]].alloc(1)
-        # This initializes the pointer memory with a value
         self.root.init_pointee_move(HAMTNode[K, V]())
+        self._custom_hash_fn = Optional[fn (K) -> UInt64]()
         # TODO make this a comptime var
         self._max_level = 10
-        pass
+
+    fn __init__(out self, hash_fn: fn (K) -> UInt64):
+        self.root = UnsafePointer[HAMTNode[K, V]].alloc(1)
+        self.root.init_pointee_move(HAMTNode[K, V]())
+        self._custom_hash_fn = Optional(hash_fn)
+        self._max_level = 10
 
     fn get(self, key: K) raises -> Optional[V]:
         if not self.root:
@@ -147,8 +172,13 @@ struct HAMT[K: Movable & Copyable & Hashable, V: Movable & Copyable]:
         """
         This returns an integer of size 60 bits, by clearing the top 4 bits
         """
-        hashed_key = hash(key)
-        filtered_key = hashed_key & FILTER
+        var hashed_key: UInt64
+        if self._custom_hash_fn:
+            hashed_key = self._custom_hash_fn.value()(key)
+        else:
+            hashed_key = hash(key)
+
+        var filtered_key = hashed_key & FILTER
 
         logger.debug("Original " + bin(hashed_key)[2:].rjust(64, "0"))
         logger.debug("Filtered " + bin(filtered_key)[2:].rjust(64, "0"))

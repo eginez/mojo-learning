@@ -4,8 +4,14 @@ from hamt import HAMTLeafNode, HAMTNode, HAMT
 
 def test_hamt_leaf_node():
     var leaf = HAMTLeafNode[String, Int]("test_key", 42)
-    assert_equal(leaf.key, "test_key")
-    assert_equal(leaf.value, 42)
+    # Test using the new get() method instead of direct attribute access
+    var result = leaf.get("test_key")
+    assert_true(result, "Expected to find test_key")
+    assert_equal(result.value(), 42)
+
+    # Test that non-existent key returns None
+    var missing = leaf.get("missing")
+    assert_false(missing, "Expected missing key to not be found")
     print("✓ HAMTLeafNode tests passed")
 
 
@@ -331,3 +337,64 @@ def test_hamt_deep_tree():
             assert_equal(hamt.get(key).value(), key * 2)
 
     print("✓ HAMT deep tree tests passed")
+
+
+def test_update_values():
+    var hamt = HAMT[Int, String]()
+
+    # Since hash is 60-bit and we use 6-bit chunks, we have 10 levels
+    # If two keys have the same hash, they'll follow the same path
+    # and end up at the same leaf node
+
+    # Let's create a scenario where keys will definitely collide
+    # by using the internal structure knowledge
+
+    # Insert first key
+    hamt.set(123, "first_value")
+
+    # Now let's try to insert a key that will traverse the same path
+    # For now, let's just test what happens when we update the same key
+    hamt.set(123, "updated_value")
+
+    # This should update, not collide
+    var result = hamt.get(123)
+    assert_equal(result.value(), "updated_value")
+
+    print("✓ Basic key update works")
+
+    # The real test is: what happens when two DIFFERENT keys
+    # hash to the same value? Current implementation will fail.
+    print("✓ Hash collision behavior test completed (limited)")
+
+
+def test_hamt_forced_hash_collision():
+    """Test HAMT with custom hash function that forces collisions"""
+
+    # Define a collision hash function that always returns the same value
+    fn collision_hash(key: Int) -> UInt64:
+        return UInt64(42)  # All keys hash to the same value!
+
+    # Create HAMT with collision-inducing hash function
+    var hamt = HAMT[Int, String](collision_hash)
+
+    # Test data: keys and expected values
+    var test_keys = List[Int]()
+    var expected_values = List[String]()
+    test_keys.append(1)
+    test_keys.append(2)
+    test_keys.append(100)
+    expected_values.append("one")
+    expected_values.append("two")
+    expected_values.append("hundred")
+
+    # Insert all keys - they will all have the same hash
+    for i in range(len(test_keys)):
+        hamt.set(test_keys[i], expected_values[i])
+
+    # Verify all keys can be retrieved correctly
+    for i in range(len(test_keys)):
+        var result = hamt.get(test_keys[i])
+        if result:
+            assert_equal(result.value(), expected_values[i])
+        else:
+            assert_true(False, "Value expected")
