@@ -398,3 +398,16 @@ def test_hamt_forced_hash_collision():
             assert_equal(result.value(), expected_values[i])
         else:
             assert_true(False, "Value expected")
+
+
+fn test_collision() raises:
+    # Create HAMT with custom hash that always returns 0 (force collisions)
+    fn collision_hash(x: Int) -> UInt64:
+        return 0
+
+    var hamt = HAMT[Int, Int](collision_hash)
+    hamt.set(1, 100)
+    hamt.set(2, 200)  # This should collide with key 1
+
+    assert_equal(hamt.get(1).or_else(-1), 100)
+    assert_equal(hamt.get(2).or_else(-1), 200)

@@ -47,7 +47,7 @@ struct HAMTNode[
     # It represents a sparse array via an intenger
     var children_bitmap: UInt64
     #
-    # This tells gives you the actual child, it is a dense
+    # This gives you the actual child, it is a dense
     # array.
     var children: List[UnsafePointer[HAMTNode[K, V]]]
     var leaf_node: Optional[HAMTLeafNode[K, V]]
@@ -105,6 +105,12 @@ struct HAMTNode[
         child_index = pop_count(masked_bitmap)
         assert_true(child_index < len(self.children), "bad child index")
         return self.children[child_index]
+
+    fn __del__(deinit self):
+        for child in self.children:
+            if child:
+                child.destroy_pointee()
+                child.free()
 
 
 struct HAMT[
@@ -180,10 +186,15 @@ struct HAMT[
 
         var filtered_key = hashed_key & FILTER
 
-        logger.debug("Original " + bin(hashed_key)[2:].rjust(64, "0"))
-        logger.debug("Filtered " + bin(filtered_key)[2:].rjust(64, "0"))
+        # logger.debug("Original " + bin(hashed_key)[2:].rjust(64, "0"))
+        # logger.debug("Filtered " + bin(filtered_key)[2:].rjust(64, "0"))
 
         return filtered_key
+
+    fn __del__(deinit self):
+        if self.root:
+            self.root.destroy_pointee()
+            self.root.free()
 
 
 fn main() raises:
