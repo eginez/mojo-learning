@@ -11,4 +11,4 @@ test = "mojo test -I src/mojo tests/mojo/test_hamt.mojo"
 
 [dependencies]
 mojo = "<1.0.0"
-python = "3.11.13"
+python = ">=3.12,<3.13"
