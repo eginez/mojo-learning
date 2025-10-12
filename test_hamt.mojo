@@ -85,7 +85,7 @@ def test_hamt_node_get_child():
 
 def test_hamt_value_creation():
     var node = HAMTNode[String, Int]()
-    node.add_value("hello", 1)
+    _ = node.add_value("hello", 1)
     assert_equal(node.get_value("hello").value(), 1)
 
 
@@ -411,3 +411,204 @@ fn test_collision() raises:
 
     assert_equal(hamt.get(1).or_else(-1), 100)
     assert_equal(hamt.get(2).or_else(-1), 200)
+
+
+def test_dunder_getitem():
+    """Test __getitem__ dunder method (bracket notation for reading)"""
+    var hamt = HAMT[Int, String]()
+    hamt.set(1, "one")
+    hamt.set(2, "two")
+    hamt.set(3, "three")
+
+    # Test successful retrieval using bracket notation
+    assert_equal(hamt[1], "one")
+    assert_equal(hamt[2], "two")
+    assert_equal(hamt[3], "three")
+
+
+def test_dunder_getitem_raises():
+    """Test that __getitem__ raises error for missing keys"""
+    var hamt = HAMT[Int, String]()
+    hamt.set(1, "one")
+
+    var raised = False
+    try:
+        _ = hamt[999]  # This key doesn't exist
+    except:
+        raised = True
+
+    assert_true(raised, "Expected KeyError for missing key")
+
+
+def test_dunder_setitem():
+    """Test __setitem__ dunder method (bracket notation for writing)"""
+    var hamt = HAMT[String, Int]()
+
+    # Test setting values using bracket notation
+    hamt["apple"] = 1
+    hamt["banana"] = 2
+    hamt["cherry"] = 3
+
+    # Verify values were set correctly
+    assert_equal(hamt["apple"], 1)
+    assert_equal(hamt["banana"], 2)
+    assert_equal(hamt["cherry"], 3)
+
+    # Test overwriting existing key
+    hamt["apple"] = 100
+    assert_equal(hamt["apple"], 100)
+
+
+def test_dunder_contains():
+    """Test __contains__ dunder method (in operator)"""
+    var hamt = HAMT[Int, String]()
+    hamt.set(1, "one")
+    hamt.set(5, "five")
+    hamt.set(10, "ten")
+
+    # Test keys that exist
+    assert_true(1 in hamt, "Key 1 should be in HAMT")
+    assert_true(5 in hamt, "Key 5 should be in HAMT")
+    assert_true(10 in hamt, "Key 10 should be in HAMT")
+
+    # Test keys that don't exist
+    assert_false(2 in hamt, "Key 2 should not be in HAMT")
+    assert_false(999 in hamt, "Key 999 should not be in HAMT")
+    assert_false(-1 in hamt, "Key -1 should not be in HAMT")
+
+
+def test_dunder_len():
+    """Test __len__ dunder method"""
+    var hamt = HAMT[Int, Int]()
+
+    # Empty HAMT should have length 0
+    assert_equal(len(hamt), 0)
+
+    # Add items and check length increases
+    hamt.set(1, 100)
+    assert_equal(len(hamt), 1)
+
+    hamt.set(2, 200)
+    assert_equal(len(hamt), 2)
+
+    hamt.set(3, 300)
+    assert_equal(len(hamt), 3)
+
+    # Overwriting a key shouldn't change length
+    hamt.set(2, 999)
+    assert_equal(len(hamt), 3)
+
+
+def test_dunder_str_empty():
+    """Test __str__ dunder method with empty HAMT"""
+    var hamt = HAMT[Int, Int]()
+    var str_repr = hamt.__str__()
+    assert_equal(str_repr, "{}")
+
+
+def test_dunder_str_single_item():
+    """Test __str__ dunder method with single item"""
+    var hamt = HAMT[Int, String]()
+    hamt.set(42, "answer")
+
+    var str_repr = hamt.__str__()
+    # Should contain the key-value pair
+    assert_true("42" in str_repr, "String should contain key")
+    assert_true("answer" in str_repr, "String should contain value")
+    assert_true("{" in str_repr, "String should start with {")
+    assert_true("}" in str_repr, "String should end with }")
+
+
+def test_dunder_str_multiple_items():
+    """Test __str__ dunder method with multiple items"""
+    var hamt = HAMT[Int, Int]()
+    hamt.set(1, 100)
+    hamt.set(2, 200)
+    hamt.set(3, 300)
+
+    var str_repr = hamt.__str__()
+
+    # Should be dict-like format
+    assert_true("{" in str_repr, "String should start with {")
+    assert_true("}" in str_repr, "String should end with }")
+
+    # Should contain all keys and values
+    assert_true("1" in str_repr, "String should contain key 1")
+    assert_true("2" in str_repr, "String should contain key 2")
+    assert_true("3" in str_repr, "String should contain key 3")
+    assert_true("100" in str_repr, "String should contain value 100")
+    assert_true("200" in str_repr, "String should contain value 200")
+    assert_true("300" in str_repr, "String should contain value 300")
+
+
+def test_dunder_str_strings():
+    """Test __str__ with string keys and values"""
+    var hamt = HAMT[String, String]()
+    hamt.set("key1", "value1")
+    hamt.set("key2", "value2")
+
+    var str_repr = hamt.__str__()
+
+    assert_true("key1" in str_repr, "String should contain key1")
+    assert_true("key2" in str_repr, "String should contain key2")
+    assert_true("value1" in str_repr, "String should contain value1")
+    assert_true("value2" in str_repr, "String should contain value2")
+
+
+def test_dunder_repr_empty():
+    """Test __repr__ dunder method with empty HAMT"""
+    var hamt = HAMT[Int, Int]()
+    var repr_str = hamt.__repr__()
+
+    assert_true("HAMT" in repr_str, "Repr should contain HAMT")
+    assert_true("{}" in repr_str, "Repr should contain {}")
+
+
+def test_dunder_repr_with_items():
+    """Test __repr__ dunder method with items"""
+    var hamt = HAMT[Int, String]()
+    hamt.set(1, "one")
+    hamt.set(2, "two")
+
+    var repr_str = hamt.__repr__()
+
+    # Should have HAMT prefix
+    assert_true("HAMT" in repr_str, "Repr should contain HAMT")
+
+    # Should contain the dict representation
+    assert_true("1" in repr_str, "Repr should contain key 1")
+    assert_true("2" in repr_str, "Repr should contain key 2")
+    assert_true("one" in repr_str, "Repr should contain value 'one'")
+    assert_true("two" in repr_str, "Repr should contain value 'two'")
+
+
+def test_combined_dunder_methods():
+    """Test using multiple dunder methods together"""
+    var hamt = HAMT[Int, Int]()
+
+    # Use __setitem__ to add values
+    hamt[1] = 10
+    hamt[2] = 20
+    hamt[3] = 30
+
+    # Use __len__
+    assert_equal(len(hamt), 3)
+
+    # Use __contains__
+    assert_true(1 in hamt)
+    assert_true(2 in hamt)
+    assert_false(999 in hamt)
+
+    # Use __getitem__
+    assert_equal(hamt[1], 10)
+    assert_equal(hamt[2], 20)
+    assert_equal(hamt[3], 30)
+
+    # Update using __setitem__
+    hamt[1] = 100
+    assert_equal(hamt[1], 100)
+    assert_equal(len(hamt), 3)  # Length shouldn't change
+
+    # Check __str__ contains updated value
+    var str_repr = hamt.__str__()
+    assert_true("100" in str_repr, "String should contain updated value")
