@@ -25,18 +25,18 @@ struct HAMTLeafNode[
     fn add(mut self, key: K, value: V):
         for i in range(len(self._items)):
             if self._items[i][0] == key:
-                self._items[i] = (key, value)
+                self._items[i] = (key.copy(), value.copy())
                 return
-        self._items.append(Tuple(key, value))
+        self._items.append(Tuple(key.copy(), value.copy()))
 
     fn get(self, key: K) -> Optional[V]:
         if len(self._items) == 1:
             if self._items[0][0] == key:
-                return Optional(self._items[0][1])
+                return Optional(self._items[0][1].copy())
 
         for item in self._items:
             if item[0] == key:
-                return Optional(item[1])
+                return Optional(item[1].copy())
         return Optional[V]()
 
 
