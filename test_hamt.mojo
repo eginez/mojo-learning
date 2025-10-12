@@ -368,7 +368,7 @@ def test_update_values():
 
 
 def test_hamt_forced_hash_collision():
-    """Test HAMT with custom hash function that forces collisions"""
+    """Test HAMT with custom hash function that forces collisions."""
 
     # Define a collision hash function that always returns the same value
     fn collision_hash(key: Int) -> UInt64:
@@ -414,7 +414,7 @@ fn test_collision() raises:
 
 
 def test_dunder_getitem():
-    """Test __getitem__ dunder method (bracket notation for reading)"""
+    """Test __getitem__ dunder method (bracket notation for reading)."""
     var hamt = HAMT[Int, String]()
     hamt.set(1, "one")
     hamt.set(2, "two")
@@ -427,7 +427,7 @@ def test_dunder_getitem():
 
 
 def test_dunder_getitem_raises():
-    """Test that __getitem__ raises error for missing keys"""
+    """Test that __getitem__ raises error for missing keys."""
     var hamt = HAMT[Int, String]()
     hamt.set(1, "one")
 
@@ -441,7 +441,7 @@ def test_dunder_getitem_raises():
 
 
 def test_dunder_setitem():
-    """Test __setitem__ dunder method (bracket notation for writing)"""
+    """Test __setitem__ dunder method (bracket notation for writing)."""
     var hamt = HAMT[String, Int]()
 
     # Test setting values using bracket notation
@@ -460,7 +460,7 @@ def test_dunder_setitem():
 
 
 def test_dunder_contains():
-    """Test __contains__ dunder method (in operator)"""
+    """Test __contains__ dunder method (in operator)."""
     var hamt = HAMT[Int, String]()
     hamt.set(1, "one")
     hamt.set(5, "five")
@@ -478,7 +478,7 @@ def test_dunder_contains():
 
 
 def test_dunder_len():
-    """Test __len__ dunder method"""
+    """Test __len__ dunder method."""
     var hamt = HAMT[Int, Int]()
 
     # Empty HAMT should have length 0
@@ -500,14 +500,14 @@ def test_dunder_len():
 
 
 def test_dunder_str_empty():
-    """Test __str__ dunder method with empty HAMT"""
+    """Test __str__ dunder method with empty HAMT."""
     var hamt = HAMT[Int, Int]()
     var str_repr = hamt.__str__()
     assert_equal(str_repr, "{}")
 
 
 def test_dunder_str_single_item():
-    """Test __str__ dunder method with single item"""
+    """Test __str__ dunder method with single item."""
     var hamt = HAMT[Int, String]()
     hamt.set(42, "answer")
 
@@ -520,7 +520,7 @@ def test_dunder_str_single_item():
 
 
 def test_dunder_str_multiple_items():
-    """Test __str__ dunder method with multiple items"""
+    """Test __str__ dunder method with multiple items."""
     var hamt = HAMT[Int, Int]()
     hamt.set(1, 100)
     hamt.set(2, 200)
@@ -542,7 +542,7 @@ def test_dunder_str_multiple_items():
 
 
 def test_dunder_str_strings():
-    """Test __str__ with string keys and values"""
+    """Test __str__ with string keys and values."""
     var hamt = HAMT[String, String]()
     hamt.set("key1", "value1")
     hamt.set("key2", "value2")
@@ -556,7 +556,7 @@ def test_dunder_str_strings():
 
 
 def test_dunder_repr_empty():
-    """Test __repr__ dunder method with empty HAMT"""
+    """Test __repr__ dunder method with empty HAMT."""
     var hamt = HAMT[Int, Int]()
     var repr_str = hamt.__repr__()
 
@@ -565,7 +565,7 @@ def test_dunder_repr_empty():
 
 
 def test_dunder_repr_with_items():
-    """Test __repr__ dunder method with items"""
+    """Test __repr__ dunder method with items."""
     var hamt = HAMT[Int, String]()
     hamt.set(1, "one")
     hamt.set(2, "two")
@@ -583,7 +583,7 @@ def test_dunder_repr_with_items():
 
 
 def test_combined_dunder_methods():
-    """Test using multiple dunder methods together"""
+    """Test using multiple dunder methods together."""
     var hamt = HAMT[Int, Int]()
 
     # Use __setitem__ to add values
