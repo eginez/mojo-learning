@@ -65,7 +65,7 @@ The following high-level benchmarking plan, extracted from `README.md`, needs to
 
 ### 6.1. Benchmark Datasets
 
-- **Synthetic Datasets**: 
+- **Synthetic Datasets**:
   - Sequential integers
   - Random integers
   - Collision-prone keys
@@ -93,3 +93,16 @@ The following high-level benchmarking plan, extracted from `README.md`, needs to
 - **`libhamt`** (C implementation)
 - **Python's `ContextVars`**
 - **Mojo's `Dict[K, V]`**
+
+## 7. New Benchmarking Plan (Python-based)
+
+The benchmarking strategy will be updated to use Python.
+
+### 7.1. Core Strategy
+
+1.  **Build Python Extension**: The Mojo HAMT implementation will be compiled into a Python extension.
+2.  **Python Benchmark Scripts**: Benchmark logic will be written in Python scripts located in the `benchmarks/` directory.
+3.  **Import and Test**: The Python scripts will import the compiled Mojo extension and run performance tests against it.
+4.  **Baseline Comparisons**: The Python benchmarks will also run against:
+    - Python's built-in `dict`
+    - `libhamt` (via CFFI or similar).
