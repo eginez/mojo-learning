@@ -5,6 +5,9 @@ from bit.bit import pop_count
 from logger import Logger, Level
 from sys.param_env import env_get_string
 from os import env
+from python import PythonObject
+from python.bindings import PythonModuleBuilder
+from os import abort
 
 
 # Clears the highest 4 bits of the UInt64
@@ -128,7 +131,7 @@ struct HAMTNode[
 struct HAMT[
     K: Movable & Copyable & Hashable & EqualityComparable & Stringable,
     V: Movable & Copyable & Stringable
-](Sized, Stringable, Representable):
+](Sized, Stringable, Representable, Defaultable, Movable):
 
     var root: UnsafePointer[HAMTNode[K, V]]
     var _size: Int
@@ -149,6 +152,12 @@ struct HAMT[
         self._custom_hash_fn = Optional(hash_fn)
         self._max_level = 10
         self._size = 0
+
+    fn __moveinit__(out self, deinit current: Self):
+        self.root = current.root
+        self._custom_hash_fn = current._custom_hash_fn^
+        self._max_level = current._max_level
+        self._size = current._size
 
     @always_inline
     fn _get_next_chunk(self, hashed_key: UInt64, level: UInt16) -> UInt8:
@@ -254,8 +263,9 @@ struct HAMT[
         return "HAMT(" + self.__str__() + ")"
 
 
-fn main() raises:
-    var node = HAMT[Int, Int]()
-    node.set(1, 1)
-    node.set(2, 200)
-    print(node.__str__())
+
+#fn main() raises:
+#    var node = HAMT[Int, Int]()
+#    node.set(1, 1)
+#    node.set(2, 200)
+#    print(node.__str__())
