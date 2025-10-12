@@ -6,6 +6,8 @@ platforms = ["osx-arm64", "linux-64"]
 version = "0.1.0"
 
 [tasks]
+build = "mojo build src/hamt.mojo -o dist/hamt"
+test = "mojo test -I src tests/test_hamt.mojo"
 
 [dependencies]
 mojo = "<1.0.0"

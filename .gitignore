@@ -12,6 +12,7 @@
 *.a
 *.so
 *.dylib
+/dist/
 
 # IDE/Editor files
 .vscode/
