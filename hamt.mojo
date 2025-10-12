@@ -25,6 +25,8 @@ struct HAMTLeafNode[
 
     fn add(mut self, key: K, value: V) -> Bool:
         """Add or update a key-value pair. Returns True if a new key was added, False if updated."""
+        # TODO: fix all the copying going on here and
+        # in set!!
         for i in range(len(self._items)):
             if self._items[i][0] == key:
                 self._items[i] = (key.copy(), value.copy())
@@ -90,12 +92,7 @@ struct HAMTNode[
 
         var new_node_pointer = UnsafePointer[HAMTNode[K, V]].alloc(1)
         new_node_pointer.init_pointee_move(HAMTNode[K, V]())
-        var should_shift = child_index < len(self.children)
-        self.children.append(new_node_pointer)
-        if should_shift:
-            for i in range(len(self.children) - 1, child_index, -1):
-                self.children[i] = self.children[i - 1]
-        self.children[child_index] = new_node_pointer
+        self.children.insert(Int(child_index), new_node_pointer)
         return new_node_pointer
 
     fn get_child(
@@ -228,6 +225,8 @@ struct HAMT[
         var result = self.get(key)
         if not result:
             raise Error("KeyError: key not found in HAMT")
+
+        # TODO: why copy??
         return result.value().copy()
 
     fn __setitem__(mut self, key: K, value: V) raises:
