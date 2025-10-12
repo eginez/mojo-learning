@@ -27,6 +27,7 @@ struct HAMTLeafNode[
         """Add or update a key-value pair. Returns True if a new key was added, False if updated."""
         # TODO: fix all the copying going on here and
         # in set!!
+        # look here: https://github.com/modular/modular/issues/4695
         for i in range(len(self._items)):
             if self._items[i][0] == key:
                 self._items[i] = (key.copy(), value.copy())
