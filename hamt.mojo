@@ -158,9 +158,7 @@ struct HAMT[
 
     @always_inline
     fn _calculate_hash(self, key: K) -> UInt64:
-        """
-        This returns an integer of size 60 bits, by clearing the top 4 bits
-        """
+        """Returns an integer of size 60 bits, by clearing the top 4 bits."""
         var hashed_key: UInt64
         if self._custom_hash_fn:
             hashed_key = self._custom_hash_fn.value()(key)
@@ -236,7 +234,7 @@ struct HAMT[
         self.set(key, value)
 
     fn __str__(self) -> String:
-        """String representation of the HAMT (like dict)."""
+        """Returns string representation of the HAMT in dict-like format."""
         if self._size == 0:
             return "{}"
 
@@ -252,11 +250,12 @@ struct HAMT[
         return result
 
     fn __repr__(self) -> String:
-        """Repr representation of the HAMT."""
+        """Returns repr representation of the HAMT."""
         return "HAMT(" + self.__str__() + ")"
 
 
 fn main() raises:
     var node = HAMT[Int, Int]()
     node.set(1, 1)
-    print(node.get(1).or_else(-1))
+    node.set(2, 200)
+    print(node.__str__())
