@@ -8,6 +8,7 @@ version = "0.1.0"
 [tasks]
 build = "mojo build src/mojo/hamt.mojo --emit shared-lib -o dist/mojo_hamt.so"
 test = "mojo test -I src/mojo tests/mojo/test_hamt.mojo"
+bench = "mojo run -I src/mojo benchmarks/mojo/mojo_hamt_bench_synthetic.mojo"
 
 [dependencies]
 mojo = "<1.0.0"

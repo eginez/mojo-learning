@@ -17,8 +17,31 @@ All necessary dependencies and tasks are defined in `pixi.toml`. You should use 
 
 ## 3. Project Structure
 
-- `hamt.mojo`: The core source code for the HAMT data structure. This is the main implementation file.
-- `test_hamt.mojo`: The test suite for the HAMT. It contains a comprehensive set of tests covering all features and edge cases.
+```
+mojo-learning/
+├── src/
+│   └── mojo/
+│       └── hamt.mojo          # Core HAMT implementation
+├── tests/
+│   └── mojo/
+│       └── test_hamt.mojo     # Test suite
+├── benchmarks/
+│   ├── mojo/
+│   │   └── bench_synthetic.mojo  # Synthetic dataset benchmarks
+│   ├── python/                   # Python benchmarks (future)
+│   └── data/
+│       └── synthetic_benchmarks.csv  # Benchmark results (CSV)
+├── pixi.toml                  # Pixi configuration
+├── README.md                  # Main documentation
+└── CLAUDE.md                  # Agent onboarding (this file)
+```
+
+### Key Files
+
+- `src/mojo/hamt.mojo`: The core source code for the HAMT data structure. This is the main implementation file.
+- `tests/mojo/test_hamt.mojo`: The test suite for the HAMT. It contains a comprehensive set of tests covering all features and edge cases.
+- `benchmarks/mojo/bench_synthetic.mojo`: Synthetic dataset benchmarks (section 6.1.1). Outputs CSV to `benchmarks/data/`.
+- `benchmarks/data/`: Directory containing benchmark output CSV files for analysis.
 - `pixi.toml`: The project configuration file. It defines dependencies and tasks for building, running, and testing. The `[tasks]` in this file are especially important.
 - `README.md`: The main project documentation, intended for human developers. It contains detailed information about architecture and benchmarking.
 
@@ -46,9 +69,27 @@ The most critical command for you is the test command. **Always run the tests af
 
 The `README.md` specifies the test command:
 ```bash
-pixi run mojo test_hamt.mojo
+pixi run mojo tests/mojo/test_hamt.mojo
 ```
 However, a more conventional pixi approach would be to have a `test` task. Based on the `pixi.toml` I've read, no such task is defined. You should rely on the command from the `README.md`. A successful run will print "All tests passed!".
+
+### **Benchmarking**
+
+To run the synthetic dataset benchmarks (section 6.1.1):
+```bash
+pixi run mojo benchmarks/mojo/bench_synthetic.mojo
+```
+
+This will:
+1. Run all synthetic benchmarks (sequential, random, collision-prone)
+2. Print results to the console
+3. Save results to `benchmarks/data/synthetic_benchmarks.csv`
+
+The CSV file can be loaded with pandas for analysis and visualization:
+```python
+import pandas as pd
+df = pd.read_csv('benchmarks/data/synthetic_benchmarks.csv')
+```
 
 ## 5. Agent Task Guidelines
 
@@ -59,20 +100,48 @@ However, a more conventional pixi approach would be to have a `test` task. Based
 5.  **Verify with Tests**: Run `pixi run mojo test_hamt.mojo`. If the tests fail, analyze the output and fix the code until all tests pass.
 6.  **Report Completion**: Inform the user once the task is complete and verified.
 
-## 6. TODO: Benchmarking Plan
+## 6. Benchmarking Plan
 
-The following high-level benchmarking plan, extracted from `README.md`, needs to be executed.
+The following benchmarking plan is extracted from `README.md`.
 
 ### 6.1. Benchmark Datasets
 
-- **Synthetic Datasets**:
-  - Sequential integers
-  - Random integers
-  - Collision-prone keys
-- **Real-World Datasets**:
-  - Unix Dictionary Words
-  - Mendeley Key-Value Store Benchmark Datasets (Twitter data)
-  - EnWiki Titles Dataset
+#### 6.1.1 Synthetic Datasets ✅ IMPLEMENTED
+
+**Location**: `benchmarks/mojo/bench_synthetic.mojo`  
+**Output**: `benchmarks/data/synthetic_benchmarks.csv`
+
+Implemented benchmarks:
+- **Sequential integers**: Keys 0, 1, 2, ..., N (predictable hashing)
+  - Sizes: 100, 1K, 10K, 100K, 1M entries
+  - Operations: Insert, Lookup (hits/misses), Update, Contains
+  
+- **Random integers**: Uniform random Int64 (realistic distribution)
+  - Sizes: 100, 1K, 10K, 100K, 1M entries
+  - Operations: Insert, Lookup (hits/misses), Update
+  
+- **Collision-prone keys**: Custom hash forcing collisions (stress test)
+  - Sizes: 1K, 10K, 100K entries
+  - Operations: Insert, Lookup (hits), Update
+
+**CSV Format**:
+```
+method,dataset_type,operation,size,total_time_ns,ops_per_sec,ns_per_op
+mojo-hamt,Sequential Integers,Insert,1000,123456,8100000,123.4
+...
+```
+
+The `method` column allows comparison between different implementations:
+- `mojo-hamt`: This HAMT implementation
+- `python-dict`: Python's built-in dict (future)
+- `python-contextvar`: Python's ContextVars (future)
+- `libhamt`: C implementation via CFFI (future)
+
+#### 6.1.2 Real-World Datasets ⏳ TODO
+
+- **Unix Dictionary Words** (235K words from `/usr/share/dict/words`)
+- **Mendeley Key-Value Store Benchmark Datasets** (Twitter data)
+- **EnWiki Titles Dataset** (15.9M Wikipedia article titles)
 
 ### 6.2. Operations to Benchmark
 
@@ -80,29 +149,17 @@ The following high-level benchmarking plan, extracted from `README.md`, needs to
 - Update (`set` on existing key)
 - Lookup (both hits and misses)
 - Contains (`in` operator)
-- Mixed read/write workloads
+- Mixed read/write workloads ⏳ TODO
 
 ### 6.3. Metrics to Track
 
-- **Performance**: Throughput (ops/sec) and Latency (ns/op).
-- **Memory**: Memory per entry (bytes/entry) and total footprint.
-- **Structure**: Average tree depth, bitmap utilization, and collision rate.
+Currently tracked:
+- **Performance**: Throughput (ops/sec) and Latency (ns/op) ✅
+- **Memory**: Memory per entry (bytes/entry) and total footprint ⏳ TODO
+- **Structure**: Average tree depth, bitmap utilization, and collision rate ⏳ TODO
 
-### 6.4. Baseline Comparisons
+### 6.4. Baseline Comparisons ⏳ TODO
 
 - **`libhamt`** (C implementation)
 - **Python's `ContextVars`**
 - **Mojo's `Dict[K, V]`**
-
-## 7. New Benchmarking Plan (Python-based)
-
-The benchmarking strategy will be updated to use Python.
-
-### 7.1. Core Strategy
-
-1.  **Build Python Extension**: The Mojo HAMT implementation will be compiled into a Python extension.
-2.  **Python Benchmark Scripts**: Benchmark logic will be written in Python scripts located in the `benchmarks/` directory.
-3.  **Import and Test**: The Python scripts will import the compiled Mojo extension and run performance tests against it.
-4.  **Baseline Comparisons**: The Python benchmarks will also run against:
-    - Python's built-in `dict`
-    - `libhamt` (via CFFI or similar).
