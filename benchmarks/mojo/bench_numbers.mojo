@@ -29,7 +29,7 @@ from random import seed
 from collections import List
 from testing import assert_equal
 from os import abort
-from python import Python
+from python import Python, PythonObject
 from sys import argv
 from utils.index import Index
 
@@ -40,7 +40,7 @@ from hamt import HAMT
 # CONFIGURATION
 # ============================================================================
 
-alias NUM_REPEATS = 10  # Number of times to repeat each benchmark
+alias NUM_REPEATS = 5  # Number of times to repeat each benchmark
 alias PRODUCT_NAME = "mojo-hamt"
 
 
@@ -48,14 +48,14 @@ alias PRODUCT_NAME = "mojo-hamt"
 # HELPER FUNCTIONS
 # ============================================================================
 
-fn generate_uuid() raises -> String:
+def generate_uuid() -> String:
     """Generate a UUID for this benchmark session using Python's uuid library."""
     var py_uuid = Python.import_module("uuid")
     var uuid_obj = py_uuid.uuid4()
     return String(uuid_obj)
 
 
-fn get_gitcommit() raises -> String:
+def get_gitcommit() -> String:
     """Get the current git commit hash."""
     var subprocess = Python.import_module("subprocess")
     try:
@@ -65,12 +65,10 @@ fn get_gitcommit() raises -> String:
             text=True,
             check=True
         )
-        # Convert PythonObject to String and strip whitespace
-        var commit = String()
-        result.stdout().write_to(commit)
-        return commit
+        var commit = String(result.stdout).strip()
+        return String(commit)
     except:
-        return ""
+        raise Error("Failed to get git commit hash")
 
 
 fn get_epoch() raises -> Int:
@@ -103,7 +101,7 @@ struct BenchmarkResult(Copyable, Movable):
         repeat: Int,
         measurement: String,
         scale: Int,
-        ns: Float64
+        total_time_ns: Int
     ):
         self.product = product
         self.gitcommit = gitcommit
@@ -112,19 +110,20 @@ struct BenchmarkResult(Copyable, Movable):
         self.repeat = repeat
         self.measurement = measurement
         self.scale = scale
-        self.ns = ns
+        # Convert total time to ns per operation (matching hamt-bench format)
+        self.ns = Float64(total_time_ns) / Float64(scale)
 
-    fn to_csv_row(self) -> String:
-        """Convert to CSV row: product,gitcommit,epoch,benchmark,repeat,measurement,scale,ns."""
-        var row = String("")
-        row += self.product + ","
-        row += self.gitcommit + ","
-        row += String(self.epoch) + ","
-        row += self.benchmark_uuid + ","
-        row += String(self.repeat) + ","
-        row += self.measurement + ","
-        row += String(self.scale) + ","
-        row += String(self.ns)
+    fn to_dict(self) raises -> PythonObject:
+        """Convert to Python dict for pandas DataFrame row."""
+        var row = Python.evaluate("{}")
+        row["product"] = self.product
+        row["gitcommit"] = self.gitcommit
+        row["epoch"] = self.epoch
+        row["benchmark"] = self.benchmark_uuid
+        row["repeat"] = self.repeat
+        row["measurement"] = self.measurement
+        row["scale"] = self.scale
+        row["ns"] = self.ns
         return row
 
 
@@ -204,10 +203,6 @@ fn run_benchmark(
         total_time_ns = bench_query(scale)
     else:
         print("ERROR: Unknown measurement type:", measurement)
-        abort()
-
-    # Calculate ns per operation
-    var ns_per_op = Float64(total_time_ns) / Float64(scale)
 
     return BenchmarkResult(
         PRODUCT_NAME,
@@ -217,48 +212,29 @@ fn run_benchmark(
         repeat,
         measurement,
         scale,
-        ns_per_op
+        total_time_ns,
     )
 
 
-fn save_results_to_csv(results: List[BenchmarkResult], filepath: String) raises:
-    """Save benchmark results to CSV file matching hamt-bench format."""
-    var csv_content = String("product,gitcommit,epoch,benchmark,repeat,measurement,scale,ns\n")
+fn print_summary(df: PythonObject) raises:
+    """Print a summary of benchmark results using pandas."""
+    # Add ops/sec column (ns is nanoseconds per operation)
+    var df_copy = df.copy()
+    df_copy["ops_per_sec"] = 1_000_000_000.0 / df_copy["ns"]
 
-    for i in range(len(results)):
-        csv_content += results[i].to_csv_row() + "\n"
+    # Select and reorder columns for display
+    var display_df = df_copy[["measurement", "scale", "repeat", "ns", "ops_per_sec"]]
 
-    with open(filepath, "w") as f:
-        f.write(csv_content)
-
-    print("\n✓ Results saved to:", filepath)
-
-
-fn print_summary(results: List[BenchmarkResult]):
-    """Print a summary of benchmark results."""
     print("\n" + "─" * 80)
     print("BENCHMARK SUMMARY")
     print("─" * 80)
-    print(
-        "Measurement".ljust(12),
-        "Scale".rjust(10),
-        "Repeat".rjust(8),
-        "ns/op".rjust(12),
-        "ops/sec".rjust(15)
-    )
-    print("─" * 80)
 
-    for i in range(len(results)):
-        var r = results[i].copy()
-        var ops_per_sec = 1_000_000_000.0 / r.ns if r.ns > 0 else 0.0
-        print(
-            r.measurement.ljust(12),
-            String(r.scale).rjust(10),
-            String(r.repeat).rjust(8),
-            String(r.ns).rjust(12),
-            String(Int(ops_per_sec)).rjust(15)
-        )
+    # Format float columns with 3 decimal positions
+    var formatters = Python.evaluate("{}")
+    formatters["ns"] = Python.evaluate("lambda x: f'{x:.3f}'")
+    formatters["ops_per_sec"] = Python.evaluate("lambda x: f'{x:.3f}'")
 
+    print(display_df.to_string(index=False, formatters=formatters))
     print("─" * 80)
 
 
@@ -268,7 +244,7 @@ fn print_summary(results: List[BenchmarkResult]):
 
 fn main() raises:
     print("\n" + "═" * 80)
-    print("  MOJO HAMT BENCHMARKS (hamt-bench compatible format)")
+    print("  MOJO HAMT BENCHMARKS")
     print("═" * 80)
 
     # Get benchmark metadata
@@ -302,8 +278,9 @@ fn main() raises:
         for i in range(len(scales)):
             print("  -", scales[i])
 
-    # Store all results
-    var results = List[BenchmarkResult]()
+    # Collect all results as list of dicts for pandas
+    var pd = Python.import_module("pandas")
+    var results_data = Python.evaluate("[]")
 
     print("\n" + "─" * 80)
     print("Running benchmarks...")
@@ -315,9 +292,7 @@ fn main() raises:
 
         for scale_idx in range(len(scales)):
             var scale = scales[scale_idx]
-
             print("  Running", measurement, "at scale", scale)
-
             for repeat in range(NUM_REPEATS):
                 var result = run_benchmark(
                     measurement,
@@ -332,17 +307,17 @@ fn main() raises:
                 if repeat < 3:
                     print("    Repeat", repeat, ":", String(result.ns), "ns/op")
 
-                results.append(result^)
+                # Add to pandas data
+                _ = results_data.append(result.to_dict())
 
             print("  ✓ Completed", measurement, "at scale", scale, "\n")
 
+    # Create DataFrame
+    var df = pd.DataFrame(results_data)
+
     # Print summary
-    print_summary(results)
+    print_summary(df)
 
     # Save to CSV
-    save_results_to_csv(results, "benchmarks/data/mojo_hamt_numbers.csv")
-
-    print("\n" + "═" * 80)
-    print("  BENCHMARKS COMPLETED")
-    print("  Total measurements:", len(results))
-    print("═" * 80 + "\n")
+    df.to_csv("benchmarks/data/mojo_hamt_numbers.csv", index=False)
+    print("\n✓ Results saved to:", "benchmarks/data/mojo_hamt_numbers.csv")
