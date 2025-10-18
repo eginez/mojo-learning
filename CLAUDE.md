@@ -8,6 +8,8 @@ This project is a high-performance implementation of a **Hash Array Mapped Trie 
 
 The implementation supports generic key-value types and provides a standard dictionary-like interface (`__getitem__`, `__setitem__`, `__len__`, etc.).
 
+**Performance Goal**: This implementation aims to benchmark competitively against [libhamt](https://github.com/mkirchner/hamt), a well-optimized C implementation of HAMT. Benchmark data from libhamt and other implementations (glib2, AVL trees, red-black trees, hsearch) is available in `db.sqlite` for comparison.
+
 ## 2. Technology Stack
 
 - **Language**: [Mojo](https://www.modular.com/mojo)
@@ -27,10 +29,11 @@ mojo-learning/
 │       └── test_hamt.mojo     # Test suite
 ├── benchmarks/
 │   ├── mojo/
-│   │   └── bench_synthetic.mojo  # Synthetic dataset benchmarks
+│   │   └── bench_numbers.mojo    # hamt-bench compatible benchmarks
 │   ├── python/                   # Python benchmarks (future)
 │   └── data/
-│       └── synthetic_benchmarks.csv  # Benchmark results (CSV)
+│       └── mojo_hamt_numbers.csv # Benchmark results (hamt-bench format)
+├── db.sqlite                  # Reference benchmark database (hamt-bench)
 ├── pixi.toml                  # Pixi configuration
 ├── README.md                  # Main documentation
 └── CLAUDE.md                  # Agent onboarding (this file)
@@ -40,8 +43,9 @@ mojo-learning/
 
 - `src/mojo/hamt.mojo`: The core source code for the HAMT data structure. This is the main implementation file.
 - `tests/mojo/test_hamt.mojo`: The test suite for the HAMT. It contains a comprehensive set of tests covering all features and edge cases.
-- `benchmarks/mojo/bench_synthetic.mojo`: Synthetic dataset benchmarks (section 6.1.1). Outputs CSV to `benchmarks/data/`.
-- `benchmarks/data/`: Directory containing benchmark output CSV files for analysis.
+- `benchmarks/mojo/bench_numbers.mojo`: Main benchmark suite compatible with [hamt-bench](https://github.com/mkirchner/hamt-bench) format. Supports command-line arguments for scale selection.
+- `benchmarks/data/mojo_hamt_numbers.csv`: Benchmark results in hamt-bench format (product,gitcommit,epoch,benchmark,repeat,measurement,scale,ns).
+- `db.sqlite`: Reference benchmark database from hamt-bench (AMD Ryzen 7, 26GB RAM). Contains libhamt, glib2, avl, rb, hsearch baseline results. **Note: These benchmarks were run on different hardware (AMD Ryzen 7) than the Mojo benchmarks (Apple Silicon), so direct performance comparisons should account for hardware differences.**
 - `pixi.toml`: The project configuration file. It defines dependencies and tasks for building, running, and testing. The `[tasks]` in this file are especially important.
 - `README.md`: The main project documentation, intended for human developers. It contains detailed information about architecture and benchmarking.
 
@@ -75,20 +79,29 @@ However, a more conventional pixi approach would be to have a `test` task. Based
 
 ### **Benchmarking**
 
-To run the synthetic dataset benchmarks (section 6.1.1):
+To run benchmarks compatible with hamt-bench format:
+
 ```bash
-pixi run mojo benchmarks/mojo/bench_synthetic.mojo
+# Run with specific scales (recommended for testing)
+pixi run mojo run -I src/mojo benchmarks/mojo/bench_numbers.mojo 1000 10000
+
+# Run with all default scales (1K, 10K, 100K, 1M - takes longer)
+pixi run mojo run -I src/mojo benchmarks/mojo/bench_numbers.mojo 1000 10000 100000 1000000
+
+# Or use defaults (no arguments = 1K, 10K, 100K, 1M)
+pixi run mojo run -I src/mojo benchmarks/mojo/bench_numbers.mojo
 ```
 
 This will:
-1. Run all synthetic benchmarks (sequential, random, collision-prone)
-2. Print results to the console
-3. Save results to `benchmarks/data/synthetic_benchmarks.csv`
+1. Run insert and query benchmarks with 10 repetitions each
+2. Print results to the console with summary statistics
+3. Save results to `benchmarks/data/mojo_hamt_numbers.csv` in hamt-bench format
 
-The CSV file can be loaded with pandas for analysis and visualization:
+The CSV file can be loaded with pandas for analysis and comparison with libhamt:
 ```python
 import pandas as pd
-df = pd.read_csv('benchmarks/data/synthetic_benchmarks.csv')
+mojo_df = pd.read_csv('benchmarks/data/mojo_hamt_numbers.csv')
+# Compare with libhamt data from db.sqlite
 ```
 
 ## 5. Agent Task Guidelines
