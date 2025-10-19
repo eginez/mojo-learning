@@ -1,0 +1,9 @@
+{
+    "arch": "arm64",
+    "cpu": "Apple M4 Pro",
+    "machine": "Esteban-MBP2024.local",
+    "num_cpu": "12",
+    "os": "Darwin 25.0.0",
+    "ram": "24GB",
+    "version": 1
+}

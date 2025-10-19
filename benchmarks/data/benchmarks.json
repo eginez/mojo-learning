@@ -1,0 +1,43 @@
+{
+    "benchmarks.HAMTBenchmarks.track_insert_10k": {
+        "code": "class HAMTBenchmarks:\n    def track_insert_10k(self) -> float:\n        \"\"\"Insert 10,000 sequential integer keys\"\"\"\n        return self._run_mojo_benchmark(\"insert\", 10000)",
+        "name": "benchmarks.HAMTBenchmarks.track_insert_10k",
+        "param_names": [],
+        "params": [],
+        "timeout": 300,
+        "type": "track",
+        "unit": "ops/sec",
+        "version": "1ba9b6a6c584c91d498ed6e28afdaa23b482d483272d6ede58a99db299c16b78"
+    },
+    "benchmarks.HAMTBenchmarks.track_insert_1k": {
+        "code": "class HAMTBenchmarks:\n    def track_insert_1k(self) -> float:\n        \"\"\"Insert 1,000 sequential integer keys\"\"\"\n        return self._run_mojo_benchmark(\"insert\", 1000)",
+        "name": "benchmarks.HAMTBenchmarks.track_insert_1k",
+        "param_names": [],
+        "params": [],
+        "timeout": 300,
+        "type": "track",
+        "unit": "ops/sec",
+        "version": "77646360f3264bf472bc27b5c95f3490d8dd571fab994c81ad8501524ade2388"
+    },
+    "benchmarks.HAMTBenchmarks.track_query_10k": {
+        "code": "class HAMTBenchmarks:\n    def track_query_10k(self) -> float:\n        \"\"\"Query 10,000 existing keys\"\"\"\n        return self._run_mojo_benchmark(\"query\", 10000)",
+        "name": "benchmarks.HAMTBenchmarks.track_query_10k",
+        "param_names": [],
+        "params": [],
+        "timeout": 300,
+        "type": "track",
+        "unit": "ops/sec",
+        "version": "e3265ce5b3c4321926e567c031afac7570a0841a007980569e5f780c8a284493"
+    },
+    "benchmarks.HAMTBenchmarks.track_query_1k": {
+        "code": "class HAMTBenchmarks:\n    def track_query_1k(self) -> float:\n        \"\"\"Query 1,000 existing keys\"\"\"\n        return self._run_mojo_benchmark(\"query\", 1000)",
+        "name": "benchmarks.HAMTBenchmarks.track_query_1k",
+        "param_names": [],
+        "params": [],
+        "timeout": 300,
+        "type": "track",
+        "unit": "ops/sec",
+        "version": "d4b5ae30ac5f0a1a8187a567efe1f8ac9a698ac6c772812720891d03e4873f51"
+    },
+    "version": 2
+}

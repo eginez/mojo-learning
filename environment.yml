@@ -1,0 +1,11 @@
+name: default
+channels:
+- https://conda.modular.com/max-nightly
+- conda-forge
+- nodefaults
+dependencies:
+- mojo <1.0.0
+- python >=3.12,<3.13
+- pandas >=2.3.3,<3
+- asv >=0.6.5,<0.7
+

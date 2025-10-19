@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "project": "mojo-hamt",
+  "project_url": "https://github.com/eginez/mojo-learning",
+  "repo": ".",
+  "branches": ["main"],
+  "environment_type": "conda",
+  "conda_channels": ["https://conda.modular.com/max-nightly", "conda-forge"],
+  "conda_environment_file": "environment.yml",
+  "install_command": [],
+  "uninstall_command": [],
+  "build_command": [],
+  "benchmark_dir": "benchmarks/python",
+  "env_dir": "benchmarks/env",
+  "results_dir": "benchmarks/data",
+  "html_dir": "benchmarks/html",
+  "dvcs": "git",
+  "show_commit_url": "https://github.com/eginez/mojo-learning/commit/",
+  "hash_length": 8
+}
