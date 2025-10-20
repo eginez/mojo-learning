@@ -4,7 +4,7 @@
   "project_url": "https://github.com/eginez/mojo-learning",
   "repo": ".",
   "branches": ["main"],
-  "environment_type": "conda",
+  "environment_type": "mamba",
   "conda_channels": ["https://conda.modular.com/max-nightly", "conda-forge"],
   "conda_environment_file": "environment.yml",
   "install_command": [],
