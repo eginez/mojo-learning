@@ -45,7 +45,6 @@ jobs:
 
       - name: Run benchmarks
         run: |
-          export CONDA_SOLVER=classic
           pixi run asv run --show-stderr
 
       - name: Generate benchmark HTML
