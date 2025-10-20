@@ -31,8 +31,10 @@ jobs:
       - name: Install dependencies
         run: pixi install
 
-      - name: Install conda-build (fix for conda 25.7.0 bug)
-        run: conda install -y conda-build
+      - name: Downgrade conda to working version (fix conda 25.9 bug)
+        run: |
+          conda install -y conda=25.5.1 -c conda-forge
+          conda --version
 
       - name: Create dist directory
         run: mkdir -p dist
