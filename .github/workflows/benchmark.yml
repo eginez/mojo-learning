@@ -20,7 +20,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Fetch full history for asv
+          fetch-depth: 0 # Fetch full history for asv
 
       - name: Set up Pixi
         uses: prefix-dev/setup-pixi@v0.8.1
@@ -30,6 +30,9 @@ jobs:
 
       - name: Install dependencies
         run: pixi install
+
+      - name: Create dist directory
+        run: mkdir -p dist
 
       - name: Build Mojo library
         run: pixi run build
