@@ -37,6 +37,9 @@ jobs:
       - name: Build Mojo library
         run: pixi run build
 
+      - name: Register machine for asv
+        run: pixi run asv machine --yes
+
       - name: Run benchmarks
         run: |
           pixi run asv run --show-stderr
